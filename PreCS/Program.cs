@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
+
 namespace PreCS
 {
     class Program
@@ -18,10 +19,8 @@ namespace PreCS
             var asm = AssemblyDefinition.ReadAssembly(args[0]);
             var module = asm.MainModule;
             var builderAttribute = module.Import(typeof(BuilderAttribute));
-
-            var allTypes = module.GetTypes().Skip(1).ToArray();
+            var allTypes = module.GetTypes().Skip(1).ToArray();//<Module> Skip
             var allRefTypes = refModule.GetTypes();
-
             var allMethods = (
                 from type in allTypes
                 from method in type.Methods
@@ -36,12 +35,10 @@ namespace PreCS
                 where allMethods.ContainsKey(fullName)
                 select (fullName, method))
                 .ToDictionary(t => t.Item1, t => t.Item2);
-
             var builderMethods = allRefMethods.Where(m => m.Value.IsDefined(typeof(BuilderAttribute)))
-                .ToDictionary(p => p.Key, p => p.Value);
+                .ToDictionary(p => p.Key, p => p.Value);//Cache BuilderMethods
             var initializerMethods = allRefMethods.Where(m => m.Value.IsDefined(typeof(InitializerAttribute))).ToArray()
-                .ToDictionary(p => p.Value.GetCustomAttribute<InitializerAttribute>().TargetName, p => p.Value);
-
+                .ToDictionary(p => p.Value.GetCustomAttribute<InitializerAttribute>().TargetName, p => p.Value);//Cache InitializerMethods
             foreach (var method in allMethods)
             {
                 var body = method.Value.Body;
@@ -57,14 +54,13 @@ namespace PreCS
                         case Code.Callvirt:
                             {
                                 var calledMethod = (instruction.Operand as MethodReference).Resolve();
-                                if (!allRefMethods.ContainsKey(GetFullName(calledMethod)))
+                                if (!allRefMethods.ContainsKey(GetFullName(calledMethod)))//Defined by Extern Library
                                     break;
                                 var calledRefMethod = allRefMethods[GetFullName(calledMethod)];
                                 if (builderMethods.ContainsValue(calledRefMethod))
                                 {
                                     MethodInfo builder = builderMethods[GetFullName(calledMethod)];
                                     MethodInfo initializer = initializerMethods[builder.GetCustomAttribute<BuilderAttribute>().Name];
-
                                     List<Instruction> addTemp = new List<Instruction>();
                                     Stack<object> callStack = new Stack<object>();
                                     int parameterLength = calledMethod.Parameters.Count;
@@ -82,32 +78,23 @@ namespace PreCS
                                     {
                                         break;
                                     }
-
-                                    removeList.AddRange(addTemp);
-                                    initializer.Invoke(null, null);
-                                    var result = builder.Invoke(null, callStack.ToArray());
-                                    replaceList.Add((instruction, il.Save(result)));
+                                    removeList.AddRange(addTemp);//Remove parameter opcodes
+                                    initializer.Invoke(null, null);//Invoke Initializer
+                                    var result = builder.Invoke(null, callStack.ToArray());//Invoke Builder
+                                    replaceList.Add((instruction, il.Save(result)));//Replace Call OpCode to result
                                     Helper.ClearField();
                                 }
                                 break;
                             }
                     }
                 }
-
                 foreach (var replace in replaceList)
                     il.Replace(replace.oldInst, replace.newInst);
                 foreach (var remove in removeList)
                     il.Remove(remove);
             }
-
-            asm.Write(args[0]);
+            asm.Write(args[0]);//Save modified assembly
         }
-        
-        private static int GetArgIndex(Instruction instruction)
-        {
-            return (instruction.Operand == null) ? int.Parse(instruction.OpCode.Code.ToString().Substring(6, 1)) : (instruction.Operand as ParameterDefinition).Index;
-        }
-
         private static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
         private static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
     }
