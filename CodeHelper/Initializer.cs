@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CodeHelper
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public class InitializerAttribute:Attribute
+    public class InitializerAttribute: TempAttrAttribute
     {
         public string TargetName { get; }
         public InitializerAttribute(string targetName)

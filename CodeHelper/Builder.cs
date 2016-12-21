@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CodeHelper
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public class BuilderAttribute:Attribute
+    public class BuilderAttribute: TempAttrAttribute
     {
         public string Name { get; }
         public BuilderAttribute(string name)

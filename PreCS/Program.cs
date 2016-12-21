@@ -14,107 +14,58 @@ namespace PreCS
     {
         static void Main(string[] args)
         {
-            var refAsm = Assembly.Load(File.ReadAllBytes(args[0]));
-            var refModule = refAsm.ManifestModule;
+            var asm = Assembly.Load(File.ReadAllBytes(args[0]));
+            var module = asm.ManifestModule;
 
-            var asm = AssemblyDefinition.ReadAssembly(args[0]);
-            var module = asm.MainModule;
+            var defAsm = AssemblyDefinition.ReadAssembly(args[0]);
+            var defModule = defAsm.MainModule;
 
-            var allTypes = module.GetTypes().Skip(1).ToArray();//<Module> Skip
-            var allRefTypes = refModule.GetTypes();
-            var allMethods = (
+            var allTypes = defModule.GetTypes().Skip(1).ToArray();//<Module> Skip
+            var allRefTypes = module.GetTypes();
+
+            var defMethods = (
                 from type in allTypes
                 from method in type.Methods
-                let fullName = $"{type.FullName}.{method.Name}"
+                let fullName = GetFullName(method)
                 where !method.IsConstructor
                 select (fullName, method))
                 .ToDictionary(t => t.Item1, t => t.Item2);
 
-            var allRefMethods = (
+            var methods = (
                 from type in allRefTypes
                 from method in type.GetRuntimeMethods()
-                let fullName = $"{type.FullName}.{method.Name}"
-                where allMethods.ContainsKey(fullName)
+                let fullName = GetFullName(method)
+                where defMethods.ContainsKey(fullName)
                 select (fullName, method))
                 .ToDictionary(t => t.Item1, t => t.Item2);
 
-            var builderMethods = allRefMethods.Where(m => m.Value.IsDefined(typeof(BuilderAttribute)))
-                .ToDictionary(p => p.Key, p => p.Value);//Cache BuilderMethods
 
-            var initializerMethods = allRefMethods.Where(m => m.Value.IsDefined(typeof(InitializerAttribute))).ToArray()
-                .ToDictionary(p => p.Value.GetCustomAttribute<InitializerAttribute>().TargetName, p => p.Value);//Cache InitializerMethods
+            Builder builder = new Builder(methods, defMethods);
+            builder.Run();
 
-            foreach (var method in allMethods)
+
+            foreach(var m in methods)
             {
-                var body = method.Value.Body;
-                var il = body.GetILProcessor();
-
-                var replaceList = new List<(Instruction oldInst, Instruction newInst)>();
-                var removeList = new List<Instruction>();
-
-                foreach (var instruction in body.Instructions)
+                var targetMethod = defMethods[m.Key];
+                if (m.Value.IsDefined(typeof(TemporaryMethodAttribute)))
                 {
-                    switch (instruction.OpCode.Code)
-                    {
-                        case Code.Call:
-                        case Code.Calli:
-                        case Code.Callvirt:
-                            {
-                                var calledMethod = (instruction.Operand as MethodReference).Resolve();
-
-                                if (!allRefMethods.ContainsKey(GetFullName(calledMethod)))//Defined by Extern Library
-                                    break;
-
-                                var calledRefMethod = allRefMethods[GetFullName(calledMethod)];
-                                if (builderMethods.ContainsValue(calledRefMethod))
-                                {
-                                    MethodInfo builder = builderMethods[GetFullName(calledMethod)];
-                                    MethodInfo initializer = initializerMethods[builder.GetCustomAttribute<BuilderAttribute>().Name];
-
-                                    List<Instruction> addTemp = new List<Instruction>();
-                                    Stack<object> callStack = new Stack<object>();
-                                    int parameterLength = calledMethod.Parameters.Count;
-                                    Instruction temp = instruction.Previous;
-
-                                    try
-                                    {
-                                        for (int i = 0; i < parameterLength; i++)
-                                        {
-                                            callStack.Push(temp.Convert());
-                                            addTemp.Add(temp);
-                                            temp = temp.Previous;
-                                        }
-                                    }
-                                    catch (ArgumentException)
-                                    {
-                                        break;
-                                    }
-
-                                    removeList.AddRange(addTemp);//Remove parameter opcodes
-
-                                    initializer.Invoke(null, null);//Invoke Initializer
-
-                                    var result = builder.Invoke(null, callStack.ToArray());//Invoke Builder
-
-                                    replaceList.Add((instruction, il.Save(result)));//Replace Call OpCode to result
-
-                                    Helper.ClearField();
-                                }
-                                break;
-                            }
-                    }
+                    targetMethod.DeclaringType.Methods.Remove(targetMethod);
                 }
+                else if (m.Value.IsDefined(typeof(TempAttrAttribute)))
+                {
+                    var tempAttributes = targetMethod.CustomAttributes
+                        .Where(a => a.AttributeType.Resolve().IsSubclassof(typeof(TempAttrAttribute).FullName));
 
-                foreach (var replace in replaceList)
-                    il.Replace(replace.oldInst, replace.newInst);
-                foreach (var remove in removeList)
-                    il.Remove(remove);
-            }
+                    foreach (var t in tempAttributes)
+                        targetMethod.CustomAttributes.Remove(t);
 
-            asm.Write(args[0]);//Save modified assembly
+                }
+            };
+
+            defAsm.Write(args[0]);//Save modified assembly
         }
 
-        private static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
-        private static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
+        internal static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
+        internal static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
     }
 }

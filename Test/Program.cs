@@ -14,6 +14,7 @@ namespace Test
         }
 
         [Builder("Fib")]
+        [TemporaryMethod]
         static int Fib(int num)
         {
             if (num < 2)
@@ -24,6 +25,7 @@ namespace Test
         }
 
         [Initializer("Fib")]
+        [TemporaryMethod]
         static void FibInit()
         {
             Helper.SaveField("Cache", new int[50]);
