@@ -2,7 +2,7 @@
 # How it works
 
 
-1. Search Call Opcode witch call Builder method
+1. Search Call Opcode which call Builder method
 
 2. Call Initializer method pair with Builder name
 
