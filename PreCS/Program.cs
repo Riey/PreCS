@@ -19,6 +19,8 @@ namespace PreCS
             var asm = Assembly.Load(File.ReadAllBytes(args[0]));
             var module = asm.ManifestModule;
 
+            StackAnalyser.ExternModule = module;
+
             var defAsm = AssemblyDefinition.ReadAssembly(new FileStream(args[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
             var defModule = defAsm.MainModule;
 
@@ -50,7 +52,7 @@ namespace PreCS
                 DeleteTemporaryMembers(t);
                 DeleteTempAttributes(t);
             }
-
+            
             defAsm.Write(new FileStream(args[0], FileMode.Open, FileAccess.Write, FileShare.ReadWrite));//Save modified assembly
         }
 

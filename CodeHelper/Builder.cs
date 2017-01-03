@@ -6,10 +6,16 @@ using System.Threading.Tasks;
 
 namespace CodeHelper
 {
+    /// <summary>
+    /// Value Builder
+    /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
     public class BuilderAttribute: TempAttrAttribute
     {
         public string Name { get; }
+        /// <summary>
+        /// </summary>
+        /// <param name="name">Builder's Name</param>
         public BuilderAttribute(string name)
         {
             Name = name;

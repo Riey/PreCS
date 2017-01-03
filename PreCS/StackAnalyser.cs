@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Mono.Cecil;
@@ -11,6 +12,7 @@ namespace PreCS
 {
     internal static class StackAnalyser
     {
+        internal static Module ExternModule;
         private static Instruction _lastInstruction;
         internal static object PopObject(List<Instruction> removeList, Instruction instruction)
         {
@@ -73,10 +75,20 @@ namespace PreCS
                     break;
 
                 case Code.Ldsfld:
-                    var field = (instruction.Operand as FieldReference);
-                    var type = Type.GetType(field.DeclaringType.FullName);
-                    result = type.GetRuntimeField(field.Name).GetValue(null);
-                    break;
+                    {
+                        var field = (instruction.Operand as FieldReference);
+                        var type = Type.GetType(field.DeclaringType.FullName) ?? ExternModule.GetType(field.DeclaringType.FullName);
+                        result = type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+                        break;
+                    }
+
+                case Code.Stsfld:
+                    {
+                        var field = (instruction.Operand as FieldReference);
+                        var type = Type.GetType(field.DeclaringType.FullName) ?? ExternModule.GetType(field.DeclaringType.FullName);
+                        type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(PopObject(removeList, instruction.Previous));
+                        break;
+                    }
 
                 case Code.Ldc_I4_S:
                     result = (int)(sbyte)instruction.Operand;

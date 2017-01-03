@@ -11,7 +11,7 @@ namespace Test
 
         static void Main(string[] args)
         {
-            long result = Fib(100);
+            long result = Fib(5 + 5);
             Console.WriteLine(result);
         }
 
