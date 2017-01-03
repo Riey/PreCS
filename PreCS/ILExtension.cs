@@ -32,31 +32,5 @@ namespace PreCS
                     return il.Create(OpCodes.Nop);
             }
         }
-
-        internal static object Convert(this Instruction instruction)
-        {
-            if (instruction == null)
-                throw new ArgumentNullException(nameof(instruction));
-            switch (instruction.OpCode.Code)
-            {
-                case Code.Nop:
-                    return Convert(instruction.Next);
-                case Code.Ldc_I4:
-                case Code.Ldc_I8:
-                case Code.Ldc_R4:
-                case Code.Ldc_R8:
-                    return instruction.Operand;
-                case Code.Ldc_I4_S:
-                    return (Int32)(SByte)instruction.Operand;
-                case Code.Ldc_I4_M1:
-                    return (Int32)(-1);
-                default:
-                    int code = (int)instruction.OpCode.Code;
-                    if (code >= 22 && code <= 30)
-                        return code - 22;
-                    else
-                        throw new ArgumentException("OpCode must be Ldc_XX", nameof(instruction));
-            }
-        }
     }
 }

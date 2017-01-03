@@ -6,29 +6,31 @@ namespace Test
     class Program
     {
 
+        [Temporary]
+        private static long[] _cache;
 
         static void Main(string[] args)
         {
-            int result = Fib(40);
+            long result = Fib(100);
             Console.WriteLine(result);
         }
 
         [Builder("Fib")]
-        [TemporaryMethod]
-        static int Fib(int num)
+        [Temporary]
+        static long Fib(long num)
         {
             if (num < 2)
                 return num;
-            else if (Helper.LoadField<int[]>("Cache")[num] == 0)
-                Helper.LoadField<int[]>("Cache")[num] = Fib(num - 2) + Fib(num - 1);
-            return Helper.LoadField<int[]>("Cache")[num];
+            else if (_cache[num] == 0)
+                _cache[num] = Fib(num - 2) + Fib(num - 1);
+            return _cache[num];
         }
 
         [Initializer("Fib")]
-        [TemporaryMethod]
+        [Temporary]
         static void FibInit()
         {
-            Helper.SaveField("Cache", new int[50]);
+            _cache = new long[1000];
         }
     }
 }

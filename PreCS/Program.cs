@@ -1,6 +1,7 @@
 ﻿using CodeHelper;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,10 +15,11 @@ namespace PreCS
     {
         static void Main(string[] args)
         {
+
             var asm = Assembly.Load(File.ReadAllBytes(args[0]));
             var module = asm.ManifestModule;
 
-            var defAsm = AssemblyDefinition.ReadAssembly(args[0]);
+            var defAsm = AssemblyDefinition.ReadAssembly(new FileStream(args[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
             var defModule = defAsm.MainModule;
 
             var allTypes = defModule.GetTypes().Skip(1).ToArray();//<Module> Skip
@@ -40,31 +42,66 @@ namespace PreCS
                 .ToDictionary(t => t.Item1, t => t.Item2);
 
 
-            Builder builder = new Builder(methods, defMethods);
+            var builder = new Workers.BuilderWorker(methods, defMethods);
             builder.Run();
 
-
-            foreach(var m in methods)
+            foreach (var t in allTypes)
             {
-                var targetMethod = defMethods[m.Key];
-                if (m.Value.IsDefined(typeof(TemporaryMethodAttribute)))
-                {
-                    targetMethod.DeclaringType.Methods.Remove(targetMethod);
-                }
-                else if (m.Value.IsDefined(typeof(TempAttrAttribute)))
-                {
-                    var tempAttributes = targetMethod.CustomAttributes
-                        .Where(a => a.AttributeType.Resolve().IsSubclassof(typeof(TempAttrAttribute).FullName));
+                DeleteTemporaryMembers(t);
+                DeleteTempAttributes(t);
+            }
 
-                    foreach (var t in tempAttributes)
-                        targetMethod.CustomAttributes.Remove(t);
-
-                }
-            };
-
-            defAsm.Write(args[0]);//Save modified assembly
+            defAsm.Write(new FileStream(args[0], FileMode.Open, FileAccess.Write, FileShare.ReadWrite));//Save modified assembly
         }
 
+        static void DeleteTemporaryMembers(TypeDefinition type)
+        {
+            DeleteTempoaryMembers(type.Fields);
+            DeleteTempoaryMembers(type.Methods);
+            DeleteTempoaryMembers(type.Properties);
+        }
+
+        static void DeleteTempAttributes(TypeDefinition type)
+        {
+            DeleteTempAttribute(type);
+            DeleteTempAttributes(type.Fields);
+            DeleteTempAttributes(type.Properties);
+            DeleteTempAttributes(type.Events);
+            DeleteTempAttributes(type.GenericParameters);
+            foreach(var m in type.Methods)
+            {
+                DeleteTempAttribute(m);
+                DeleteTempAttribute(m.MethodReturnType);
+                DeleteTempAttributes(m.Parameters);
+                DeleteTempAttributes(m.GenericParameters);
+            }
+        }
+
+        static bool IsTempoaryMember(IMemberDefinition m) => m.CustomAttributes.Where(a => a.AttributeType.FullName == typeof(TemporaryAttribute).FullName).Any();
+
+        static void DeleteTempoaryMembers<T>(Collection<T> c) where T : IMemberDefinition
+        {
+            var t = new Queue<T>();
+            foreach (var m in c)
+                if (IsTempoaryMember(m))
+                    t.Enqueue(m);
+            while (t.Count > 0)
+                c.Remove(t.Dequeue());
+        }
+
+        static void DeleteTempAttributes<T>(Collection<T> e) where T: Mono.Cecil.ICustomAttributeProvider
+        {
+            foreach (var m in e) DeleteTempAttribute(m);
+        }
+
+        static void DeleteTempAttribute<T>(T c) where T : Mono.Cecil.ICustomAttributeProvider
+        {
+            var tempAttributes = c.CustomAttributes
+                .Where(a => a.AttributeType.Resolve().IsSubclassof(typeof(TempAttrAttribute).FullName));
+
+            foreach (var t in tempAttributes)
+                c.CustomAttributes.Remove(t);
+        }
         internal static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
         internal static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
     }

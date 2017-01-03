@@ -10,33 +10,36 @@ using MethodDic = System.Collections.Generic.Dictionary<string, System.Reflectio
 using MethodDefDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.MethodDefinition>;
 using CodeHelper;
 
-namespace PreCS
+namespace PreCS.Workers
 {
-    class Builder
+    class BuilderWorker: Worker
     {
         private MethodDic _builders;
         private MethodDic _initializers;
-        private MethodDic _methods;
-        private MethodDefDic _defMethods;
 
-        public Builder(MethodDic methods, MethodDefDic defMethods)
+        protected override (Type attributeType, Func<Attribute[], MethodInfo, string> keySelector)[] targetAttributes =>
+            new(Type attributeType, Func<Attribute[], MethodInfo, string> keySelector)[]
+                {
+                    (typeof(BuilderAttribute),(a, m) => Program.GetFullName(m)),
+                    (typeof(InitializerAttribute), (a, m) =>(a[0] as InitializerAttribute).TargetName),
+                };
+
+        public BuilderWorker(MethodDic methods, MethodDefDic defMethods):base(methods,defMethods)
         {
-            _methods = methods;
-            _defMethods = defMethods;
-
-            _builders = methods
-                .Where(m => m.Value.IsDefined(typeof(BuilderAttribute)))
-                .ToDictionary(p => p.Key, p => p.Value);//Cache BuilderMethods
-
-            _initializers = methods
-                .Where(m => m.Value.IsDefined(typeof(InitializerAttribute)))
-                .ToDictionary(p => p.Value.GetCustomAttribute<InitializerAttribute>().TargetName, p => p.Value);//Cache InitializerMethods
+            _builders = _targetMethods[typeof(BuilderAttribute)];
+            _initializers = _targetMethods[typeof(InitializerAttribute)];
         }
 
-        public void Run()
+        public override void Run()
         {
             foreach (var method in _defMethods)
             {
+
+                if (_builders.ContainsKey(method.Key))
+                    continue;
+                if (_methods[method.Key].CustomAttributes.Where(a => a.AttributeType.IsSubclassOf(typeof(InitializerAttribute))).Any())
+                    continue;
+
                 var body = method.Value.Body;
                 var il = body.GetILProcessor();
 
@@ -62,30 +65,21 @@ namespace PreCS
                                     MethodInfo builder = _builders[Program.GetFullName(calledMethod)];
                                     MethodInfo initializer = _initializers[builder.GetCustomAttribute<BuilderAttribute>().Name];
 
-                                    List<Instruction> addTemp = new List<Instruction>();
-                                    Stack<object> callStack = new Stack<object>();
                                     int parameterLength = calledMethod.Parameters.Count;
-                                    Instruction temp = instruction.Previous;
+                                    object[] args;
 
                                     try
                                     {
-                                        for (int i = 0; i < parameterLength; i++)
-                                        {
-                                            callStack.Push(temp.Convert());
-                                            addTemp.Add(temp);
-                                            temp = temp.Previous;
-                                        }
+                                        args = StackAnalyser.PopObjects(removeList, instruction.Previous, parameterLength);//Remove parameter opcodes
                                     }
                                     catch (ArgumentException)
                                     {
                                         break;
                                     }
 
-                                    removeList.AddRange(addTemp);//Remove parameter opcodes
-
                                     initializer.Invoke(null, null);//Invoke Initializer
 
-                                    var result = builder.Invoke(null, callStack.ToArray());//Invoke Builder
+                                    var result = builder.Invoke(null, args);//Invoke Builder
 
                                     replaceList.Add((instruction, il.Save(result)));//Replace Call OpCode to result
 

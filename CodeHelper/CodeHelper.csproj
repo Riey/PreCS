@@ -43,8 +43,9 @@
     <Compile Include="Builder.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Initializer.cs" />
+    <Compile Include="Inner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TemporaryMethod.cs" />
+    <Compile Include="Temporary.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

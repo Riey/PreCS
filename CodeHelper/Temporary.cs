@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace CodeHelper
 {
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class TemporaryMethodAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+    public sealed class TemporaryAttribute : Attribute
     {
     }
 
