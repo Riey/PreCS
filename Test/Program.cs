@@ -13,6 +13,9 @@ namespace Test
         {
             long result = Fib(5 + 5);
             Console.WriteLine(result);
+
+            var person = new Person();
+            person.Shoot(person);
         }
 
         [Builder("Fib")]

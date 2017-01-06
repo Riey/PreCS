@@ -1,5 +1,6 @@
 ﻿using Mono.Cecil.Cil;
 using System;
+using Mono.Cecil;
 
 namespace PreCS
 {
@@ -31,6 +32,24 @@ namespace PreCS
                 default:
                     return il.Create(OpCodes.Nop);
             }
+        }
+
+        internal static Instruction LoadArg(this ILProcessor il, int index)
+        {
+            if (index < 0)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            else if (index == 0)
+                return il.Create(OpCodes.Ldarg_0);
+            else if (index == 1)
+                return il.Create(OpCodes.Ldarg_1);
+            else if (index == 2)
+                return il.Create(OpCodes.Ldarg_2);
+            else if (index == 3)
+                return il.Create(OpCodes.Ldarg_3);
+            else if (index <= byte.MaxValue)
+                return il.Create(OpCodes.Ldarg_S, (byte)index);
+            else
+                return il.Create(OpCodes.Ldarg, index);
         }
     }
 }

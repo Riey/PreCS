@@ -10,7 +10,6 @@ namespace CodeHelper
     {
         Property,
         Field,
-        Method,
     }
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public class ThroughAttribute : TemporaryAttributeAttribute

@@ -38,10 +38,10 @@ namespace PreCS.Workers
         {
             foreach (var method in _defMethods)
             {
-
+                //Skip Builders & Initializers
                 if (_builders.ContainsKey(method.Key))
                     continue;
-                if (_methods[method.Key].CustomAttributes.Where(a => a.AttributeType.IsSubclassOf(typeof(InitializerAttribute))).Any())
+                if (_initializers.ContainsValue(method.Value))
                     continue;
 
                 var body = method.Value.Body;

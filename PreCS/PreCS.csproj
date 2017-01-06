@@ -57,6 +57,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MethodSearcher.cs" />
     <Compile Include="StackAnalyser.cs" />
     <Compile Include="Workers\BuilderWorker.cs" />
     <Compile Include="ILExtension.cs" />

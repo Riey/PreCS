@@ -15,6 +15,8 @@ namespace PreCS
                 return true;
             else
                 return type.BaseType?.Resolve().IsSubclassof(targetTypeFullName) ?? false;
-        } 
+        }
+
+        internal static bool IsSubclassof(this TypeDefinition type, Type refType) => type.IsSubclassof(refType.FullName);
     }
 }

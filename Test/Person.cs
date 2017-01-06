@@ -12,7 +12,7 @@ namespace Test
         public int Boolet { get; }
         public void Shoot(Person person)
         {
-
+            Console.WriteLine("Shoot!");
         }
     }
     class Person
