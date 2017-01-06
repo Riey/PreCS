@@ -18,5 +18,13 @@ namespace PreCS
         }
 
         internal static bool IsSubclassof(this TypeDefinition type, Type refType) => type.IsSubclassof(refType.FullName);
+
+        internal static IMemberDefinition GetMember(this TypeDefinition type, string name)
+        {
+            return
+                (IMemberDefinition)type.Properties.Where(p => p.Name == name).FirstOrDefault() ??
+                (IMemberDefinition)type.Fields.Where(f => f.Name == name).FirstOrDefault() ??
+                (IMemberDefinition)type.Methods.Where(m => m.Name == name).FirstOrDefault();
+        }
     }
 }

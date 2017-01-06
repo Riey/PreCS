@@ -9,7 +9,7 @@ namespace Test
 {
     class Gun
     {
-        public int Boolet { get; }
+        public int Boolet { get; set; }
         public void Shoot(Person person)
         {
             Console.WriteLine("Shoot!");
@@ -20,10 +20,10 @@ namespace Test
         Gun gun;
         public bool HasGun => gun != null;
 
-        [Through(TargetType.Field, "gun")]
+        [Through("gun")]
         public void Shoot(Person person) { }
 
-        [Through(TargetType.Field, "gun")]
-        public int Boolet { get; }
+        [Through("gun")]
+        public int Boolet { get; set; }
     }
 }

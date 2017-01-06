@@ -6,20 +6,16 @@ using System.Threading.Tasks;
 
 namespace CodeHelper
 {
-    public enum TargetType
-    {
-        Property,
-        Field,
-    }
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    /// <summary>
+    /// invoke member through this target(Don't use initial value in property!)
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
     public class ThroughAttribute : TemporaryAttributeAttribute
     {
-        public TargetType TargetType { get; }
         public string Name { get; }
 
-        public ThroughAttribute(TargetType targetType, string targetName)
+        public ThroughAttribute(string targetName)
         {
-            TargetType = targetType;
             Name = targetName;
         }
     }
