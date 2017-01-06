@@ -78,7 +78,8 @@ namespace PreCS
                     {
                         var field = (instruction.Operand as FieldReference);
                         var type = Type.GetType(field.DeclaringType.FullName) ?? ExternModule.GetType(field.DeclaringType.FullName);
-                        result = type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+                        result = type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                                .GetValue(null);
                         break;
                     }
 
@@ -86,7 +87,8 @@ namespace PreCS
                     {
                         var field = (instruction.Operand as FieldReference);
                         var type = Type.GetType(field.DeclaringType.FullName) ?? ExternModule.GetType(field.DeclaringType.FullName);
-                        type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(PopObject(instruction.Previous, removeList));
+                        type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                            .SetValue(null, PopObject(instruction.Previous, removeList));
                         break;
                     }
 

@@ -108,6 +108,12 @@ namespace PreCS
         internal static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
         internal static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
 
+        internal static string GetFullName(IMemberDefinition member)
+        {
+            if (member is TypeDefinition type) return type.FullName;
+            else return member.DeclaringType.FullName + "." + member.Name;
+        }
+
         internal static string GetFullName(MemberInfo member)
         {
             switch (member)

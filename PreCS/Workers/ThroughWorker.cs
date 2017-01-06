@@ -6,19 +6,21 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MethodDic = System.Collections.Generic.Dictionary<string, System.Reflection.MethodInfo>;
 using MethodDefDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.MethodDefinition>;
-using FieldDic = System.Collections.Generic.Dictionary<string, System.Reflection.FieldInfo>;
-using PropertyDic = System.Collections.Generic.Dictionary<string, System.Reflection.PropertyInfo>;
+using FieldDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.FieldDefinition>;
+using PropertyDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.PropertyDefinition>;
 using CodeHelper;
 
 namespace PreCS.Workers
 {
     class ThroughWorker : Worker
     {
-        private MethodDic _throughMethods;
+        private MethodDefDic _throughMethods;
+        private PropertyDic _throughProperties;
+        private FieldDic _throughFields;
 
-        protected override (Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[] GetTargetAttributes()
+        protected override (Type attributeType, Func<CustomAttribute[], IMemberDefinition, string> keySelector)[] GetTargetAttributes()
         {
-            return new(Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[]
+            return new(Type attributeType, Func<CustomAttribute[], IMemberDefinition, string> keySelector)[]
                         {
                             (typeof(ThroughAttribute), (a, m)=> Program.GetFullName(m)),
                         };
@@ -27,15 +29,14 @@ namespace PreCS.Workers
         public ThroughWorker(Type[] types, TypeDefinition[] defTypes) : base(types, defTypes)
         {
             _throughMethods = _targetMethods[typeof(ThroughAttribute)];
+            _throughProperties = _targetProperties[typeof(ThroughAttribute)];
+            _throughFields = _targetFields[typeof(ThroughAttribute)];
         }
 
         public override void Run()
         {
             foreach(var throughMethod in _throughMethods)
             {
-                Type targetType = throughMethod.Value.DeclaringType;
-                Type returnType = throughMethod.Value.ReturnType;
-                ParameterInfo[] parameterInfos = throughMethod.Value.GetParameters();
 
             }
         }

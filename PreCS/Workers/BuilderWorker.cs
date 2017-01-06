@@ -8,23 +8,23 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MethodDic = System.Collections.Generic.Dictionary<string, System.Reflection.MethodInfo>;
 using MethodDefDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.MethodDefinition>;
-using FieldDic = System.Collections.Generic.Dictionary<string, System.Reflection.FieldInfo>;
-using PropertyDic = System.Collections.Generic.Dictionary<string, System.Reflection.PropertyInfo>;
+using FieldDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.FieldDefinition>;
+using PropertyDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.PropertyDefinition>;
 using CodeHelper;
 
 namespace PreCS.Workers
 {
     class BuilderWorker: Worker
     {
-        private MethodDic _builders;
-        private MethodDic _initializers;
+        private MethodDefDic _builders;
+        private MethodDefDic _initializers;
 
-        protected override (Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[] GetTargetAttributes()
+        protected override (Type attributeType, Func<CustomAttribute[], IMemberDefinition, string> keySelector)[] GetTargetAttributes()
         {
-            return new(Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[]
+            return new(Type attributeType, Func<CustomAttribute[], IMemberDefinition, string> keySelector)[]
                             {
                                 (typeof(BuilderAttribute),(a, m) => Program.GetFullName(m)),
-                                (typeof(InitializerAttribute), (a, m) =>(a[0] as InitializerAttribute).TargetName),
+                                (typeof(InitializerAttribute), (a, m) => a[0].ConstructorArguments[0].Value as string),
                             };
         }
 
@@ -64,10 +64,10 @@ namespace PreCS.Workers
                                     break;
 
                                 var calledRefMethod = _methods[Program.GetFullName(calledMethod)];
-                                if (_builders.ContainsValue(calledRefMethod))
+                                if (_builders.ContainsValue(calledMethod))
                                 {
-                                    MethodInfo builder = _builders[Program.GetFullName(calledMethod)];
-                                    MethodInfo initializer = _initializers[builder.GetCustomAttribute<BuilderAttribute>().Name];
+                                    var builder = calledRefMethod;
+                                    MethodInfo initializer = _methods[Program.GetFullName(_initializers[builder.GetCustomAttribute<BuilderAttribute>().Name])];
 
                                     int parameterLength = calledMethod.Parameters.Count;
                                     object[] args;
