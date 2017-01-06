@@ -10,7 +10,7 @@ namespace CodeHelper
     /// Value Builder
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public class BuilderAttribute: TempAttrAttribute
+    public class BuilderAttribute: TemporaryAttributeAttribute
     {
         public string Name { get; }
         /// <summary>

@@ -8,39 +8,57 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MethodDic = System.Collections.Generic.Dictionary<string, System.Reflection.MethodInfo>;
 using MethodDefDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.MethodDefinition>;
+using FieldDic = System.Collections.Generic.Dictionary<string, System.Reflection.FieldInfo>;
+using PropertyDic = System.Collections.Generic.Dictionary<string, System.Reflection.PropertyInfo>;
 
 namespace PreCS.Workers
 {
     abstract class Worker
     {
+        private const BindingFlags ALL_BIND =
+            BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
         protected Dictionary<Type, MethodDic> _targetMethods;
+        protected Dictionary<Type, FieldDic> _targetFields;
+        protected Dictionary<Type, PropertyDic> _targetProperties;
         protected MethodDic _methods;
         protected MethodDefDic _defMethods;
 
-        protected abstract (Type attributeType, Func<Attribute[], MethodInfo, string> keySelector)[] targetAttributes { get; }
+        protected abstract (Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[] GetTargetAttributes();
 
-        public Worker(MethodDic methods, MethodDefDic defMethods)
+        public Worker(Type[] types, TypeDefinition[] defTypes)
         {
-            _methods = methods;
-            _defMethods = defMethods;
+            _defMethods = defTypes
+                .SelectMany(t => t.Methods)
+                .Where(t => !t.IsConstructor)
+                .ToDictionary(m => Program.GetFullName(m));
+            _methods =
+                (from type in types
+                 from method in type.GetMethods(ALL_BIND)
+                 let name = Program.GetFullName(method)
+                 where _defMethods.ContainsKey(name)
+                 select (name, method)).ToDictionary(p => p.Item1, p => p.Item2);
 
-            var targetMethods = new Dictionary<Type, MethodDic>();
-            var targetAttributes = this.targetAttributes;
+            var targetAttributes = GetTargetAttributes();
+            _targetFields = new Dictionary<Type, FieldDic>();
+            _targetMethods = new Dictionary<Type, MethodDic>();
+            _targetProperties = new Dictionary<Type, PropertyDic>();
 
             foreach(var a in targetAttributes)
             {
-                var type = a.attributeType;
-
-                var dic = (
-                    from m in methods
-                    where m.Value.IsDefined(type)
-                    select (a.keySelector(m.Value.GetCustomAttributes(type).ToArray(), m.Value), m.Value))
-                        .ToDictionary(t => t.Item1, t => t.Item2);
-
-                targetMethods.Add(a.attributeType, dic);
+                _targetFields.Add(a.attributeType,
+                    types.SelectMany(t => t.GetFields(ALL_BIND))
+                    .Where(m => m.IsDefined(a.attributeType))
+                    .ToDictionary(m => a.keySelector(m.GetCustomAttributes(a.attributeType).ToArray(), m)));
+                _targetMethods.Add(a.attributeType,
+                    types.SelectMany(t => t.GetMethods(ALL_BIND))
+                    .Where(m => m.IsDefined(a.attributeType))
+                    .ToDictionary(m => a.keySelector(m.GetCustomAttributes(a.attributeType).ToArray(), m)));
+                _targetProperties.Add(a.attributeType,
+                    types.SelectMany(t => t.GetProperties(ALL_BIND))
+                    .Where(m => m.IsDefined(a.attributeType))
+                    .ToDictionary(m => a.keySelector(m.GetCustomAttributes(a.attributeType).ToArray(), m)));
             }
-
-            _targetMethods = targetMethods;
         }
 
         public abstract void Run();

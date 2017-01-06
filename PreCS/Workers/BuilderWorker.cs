@@ -8,6 +8,8 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MethodDic = System.Collections.Generic.Dictionary<string, System.Reflection.MethodInfo>;
 using MethodDefDic = System.Collections.Generic.Dictionary<string, Mono.Cecil.MethodDefinition>;
+using FieldDic = System.Collections.Generic.Dictionary<string, System.Reflection.FieldInfo>;
+using PropertyDic = System.Collections.Generic.Dictionary<string, System.Reflection.PropertyInfo>;
 using CodeHelper;
 
 namespace PreCS.Workers
@@ -17,14 +19,16 @@ namespace PreCS.Workers
         private MethodDic _builders;
         private MethodDic _initializers;
 
-        protected override (Type attributeType, Func<Attribute[], MethodInfo, string> keySelector)[] targetAttributes =>
-            new(Type attributeType, Func<Attribute[], MethodInfo, string> keySelector)[]
-                {
-                    (typeof(BuilderAttribute),(a, m) => Program.GetFullName(m)),
-                    (typeof(InitializerAttribute), (a, m) =>(a[0] as InitializerAttribute).TargetName),
-                };
+        protected override (Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[] GetTargetAttributes()
+        {
+            return new(Type attributeType, Func<Attribute[], MemberInfo, string> keySelector)[]
+                            {
+                                (typeof(BuilderAttribute),(a, m) => Program.GetFullName(m)),
+                                (typeof(InitializerAttribute), (a, m) =>(a[0] as InitializerAttribute).TargetName),
+                            };
+        }
 
-        public BuilderWorker(MethodDic methods, MethodDefDic defMethods):base(methods,defMethods)
+        public BuilderWorker(Type[] types, TypeDefinition[] defTypes) : base(types, defTypes)
         {
             _builders = _targetMethods[typeof(BuilderAttribute)];
             _initializers = _targetMethods[typeof(InitializerAttribute)];
@@ -70,7 +74,7 @@ namespace PreCS.Workers
 
                                     try
                                     {
-                                        args = StackAnalyser.PopObjects(removeList, instruction.Previous, parameterLength);//Remove parameter opcodes
+                                        args = StackAnalyser.PopObjects(instruction.Previous, parameterLength, removeList);//Remove parameter opcodes
                                     }
                                     catch (ArgumentException)
                                     {

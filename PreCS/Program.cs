@@ -24,35 +24,23 @@ namespace PreCS
             var defAsm = AssemblyDefinition.ReadAssembly(new FileStream(args[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
             var defModule = defAsm.MainModule;
 
-            var allTypes = defModule.GetTypes().Skip(1).ToArray();//<Module> Skip
-            var allRefTypes = module.GetTypes();
-
-            var defMethods = (
-                from type in allTypes
-                from method in type.Methods
-                let fullName = GetFullName(method)
-                where !method.IsConstructor
-                select (fullName, method))
-                .ToDictionary(t => t.Item1, t => t.Item2);
-
-            var methods = (
-                from type in allRefTypes
-                from method in type.GetRuntimeMethods()
-                let fullName = GetFullName(method)
-                where defMethods.ContainsKey(fullName)
-                select (fullName, method))
-                .ToDictionary(t => t.Item1, t => t.Item2);
+            var allDefTypes = defModule.GetTypes().Skip(1).ToArray();//<Module> Skip
+            var allTypes = module.GetTypes();
 
 
-            var builder = new Workers.BuilderWorker(methods, defMethods);
-            builder.Run();
+            var throughWorker = new Workers.ThroughWorker(allTypes, allDefTypes);
+            throughWorker.Run();
 
-            foreach (var t in allTypes)
+            var builderWorker = new Workers.BuilderWorker(allTypes, allDefTypes);
+            builderWorker.Run();
+
+
+            foreach (var t in allDefTypes)
             {
                 DeleteTemporaryMembers(t);
                 DeleteTempAttributes(t);
             }
-            
+
             defAsm.Write(new FileStream(args[0], FileMode.Open, FileAccess.Write, FileShare.ReadWrite));//Save modified assembly
         }
 
@@ -70,7 +58,7 @@ namespace PreCS
             DeleteTempAttributes(type.Properties);
             DeleteTempAttributes(type.Events);
             DeleteTempAttributes(type.GenericParameters);
-            foreach(var m in type.Methods)
+            foreach (var m in type.Methods)
             {
                 DeleteTempAttribute(m);
                 DeleteTempAttribute(m.MethodReturnType);
@@ -79,7 +67,7 @@ namespace PreCS
             }
         }
 
-        static bool IsTempoaryMember(IMemberDefinition m) => m.CustomAttributes.Where(a => a.AttributeType.FullName == typeof(TemporaryAttribute).FullName).Any();
+        static bool IsTempoaryMember(IMemberDefinition m) => m.CustomAttributes.Where(a => a.AttributeType.FullName == typeof(TemporaryMemberAttribute).FullName).Any();
 
         static void DeleteTempoaryMembers<T>(Collection<T> c) where T : IMemberDefinition
         {
@@ -91,20 +79,42 @@ namespace PreCS
                 c.Remove(t.Dequeue());
         }
 
-        static void DeleteTempAttributes<T>(Collection<T> e) where T: Mono.Cecil.ICustomAttributeProvider
+        static void DeleteTempAttributes<T>(Collection<T> e) where T : Mono.Cecil.ICustomAttributeProvider
         {
             foreach (var m in e) DeleteTempAttribute(m);
         }
 
         static void DeleteTempAttribute<T>(T c) where T : Mono.Cecil.ICustomAttributeProvider
         {
-            var tempAttributes = c.CustomAttributes
-                .Where(a => a.AttributeType.Resolve().IsSubclassof(typeof(TempAttrAttribute).FullName));
+            try
+            {
+                int count = c.CustomAttributes.Count;
 
-            foreach (var t in tempAttributes)
-                c.CustomAttributes.Remove(t);
+                for (int i = 0; i < count; i++)
+                {
+                    if (c.CustomAttributes[i].AttributeType.Resolve().IsSubclassof(typeof(TemporaryAttributeAttribute).FullName))
+                    {
+                        c.CustomAttributes.RemoveAt(i);
+                        i -= 1;
+                        count -= 1;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e);
+            }
         }
         internal static string GetFullName(MethodDefinition method) => method.DeclaringType.FullName + "." + method.Name;
         internal static string GetFullName(MethodInfo method) => method.DeclaringType.FullName + "." + method.Name;
+
+        internal static string GetFullName(MemberInfo member)
+        {
+            switch (member)
+            {
+                case TypeInfo type: return type.FullName;
+                default: return member.DeclaringType.FullName + "." + member.Name;
+            }
+        }
     }
 }

@@ -13,14 +13,14 @@ namespace CodeHelper
     /// When you use this property, you must make sure there are no other references
     /// </remarks>
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-    public sealed class TemporaryAttribute : Attribute
+    public sealed class TemporaryMemberAttribute : Attribute
     {
     }
 
     /// <summary>
     /// Attribute that delete when complete preprocess
     /// </summary>
-    public abstract class TempAttrAttribute : Attribute
+    public abstract class TemporaryAttributeAttribute : Attribute
     {
 
     }

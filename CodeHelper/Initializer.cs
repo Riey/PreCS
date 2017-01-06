@@ -10,7 +10,7 @@ namespace CodeHelper
     /// Builder Initializer
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public class InitializerAttribute: TempAttrAttribute
+    public class InitializerAttribute: TemporaryAttributeAttribute
     {
         public string TargetName { get; }
         /// <summary>

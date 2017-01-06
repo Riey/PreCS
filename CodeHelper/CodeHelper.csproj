@@ -43,7 +43,7 @@
     <Compile Include="Builder.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Initializer.cs" />
-    <Compile Include="Inner.cs" />
+    <Compile Include="Through.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Temporary.cs" />
   </ItemGroup>

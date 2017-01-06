@@ -14,7 +14,7 @@ namespace PreCS
     {
         internal static Module ExternModule;
         private static Instruction _lastInstruction;
-        internal static object PopObject(List<Instruction> removeList, Instruction instruction)
+        internal static object PopObject(Instruction instruction, List<Instruction> removeList = null)
         {
             _lastInstruction = instruction;
             object result = null;
@@ -23,47 +23,47 @@ namespace PreCS
                 case Code.Add:
                 case Code.Add_Ovf:
                 case Code.Add_Ovf_Un:
-                    result = (dynamic)PopObject(removeList, instruction.Previous) + (dynamic)PopObject(removeList, _lastInstruction.Previous);
+                    result = (dynamic)PopObject(instruction.Previous, removeList) + (dynamic)PopObject(_lastInstruction.Previous, removeList);
                     break;
                 case Code.Sub:
                 case Code.Sub_Ovf:
                 case Code.Sub_Ovf_Un:
-                    result = (dynamic)PopObject(removeList, instruction.Previous) - (dynamic)PopObject(removeList, _lastInstruction.Previous);
+                    result = (dynamic)PopObject(instruction.Previous, removeList) - (dynamic)PopObject(_lastInstruction.Previous, removeList);
                     break;
                 case Code.Mul:
                 case Code.Mul_Ovf:
                 case Code.Mul_Ovf_Un:
-                    result = (dynamic)PopObject(removeList, instruction.Previous) * (dynamic)PopObject(removeList, _lastInstruction.Previous);
+                    result = (dynamic)PopObject(instruction.Previous, removeList) * (dynamic)PopObject(_lastInstruction.Previous, removeList);
                     break;
 
                 case Code.Div:
                 case Code.Div_Un:
-                    result = (dynamic)PopObject(removeList, instruction.Previous) / (dynamic)PopObject(removeList, instruction.Previous);
+                    result = (dynamic)PopObject(instruction.Previous, removeList) / (dynamic)PopObject(instruction.Previous, removeList);
                     break;
 
                 case Code.Conv_I8:
-                    result = Convert.ToInt64(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToInt64(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_I4:
-                    result = Convert.ToInt32(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToInt32(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_I2:
-                    result = Convert.ToInt16(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToInt16(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_I1:
-                    result = Convert.ToSByte(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToSByte(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_U8:
-                    result = Convert.ToUInt64(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToUInt64(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_U4:
-                    result = Convert.ToUInt32(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToUInt32(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_U2:
-                    result = Convert.ToUInt16(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToUInt16(PopObject(instruction.Previous, removeList));
                     break;
                 case Code.Conv_U1:
-                    result = Convert.ToByte(PopObject(removeList, instruction.Previous));
+                    result = Convert.ToByte(PopObject(instruction.Previous, removeList));
                     break;
 
                 case Code.Ldc_I4:
@@ -86,7 +86,7 @@ namespace PreCS
                     {
                         var field = (instruction.Operand as FieldReference);
                         var type = Type.GetType(field.DeclaringType.FullName) ?? ExternModule.GetType(field.DeclaringType.FullName);
-                        type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(PopObject(removeList, instruction.Previous));
+                        type.GetField(field.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(PopObject(instruction.Previous, removeList));
                         break;
                     }
 
@@ -108,19 +108,19 @@ namespace PreCS
                     break;
 
                 default:
-                    result = PopObject(removeList, instruction.Previous);
+                    result = PopObject(instruction.Previous, removeList);
                     break;
             }
-            removeList.Add(instruction);
+            removeList?.Add(instruction);
             return result;
         }
 
-        internal static object[] PopObjects(List<Instruction> removeList, Instruction instruction, int count)
+        internal static object[] PopObjects(Instruction instruction, int count, List<Instruction> removeList = null)
         {
             var args = new object[count];
             for (int i = 0; i < count; i++)
             {
-                args[i] = PopObject(removeList, instruction);
+                args[i] = PopObject(instruction, removeList);
             }
             return args;
         }

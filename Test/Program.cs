@@ -6,7 +6,7 @@ namespace Test
     class Program
     {
 
-        [Temporary]
+        [TemporaryMember]
         private static long[] _cache;
 
         static void Main(string[] args)
@@ -16,7 +16,7 @@ namespace Test
         }
 
         [Builder("Fib")]
-        [Temporary]
+        [TemporaryMember]
         static long Fib(long num)
         {
             if (num < 2)
@@ -27,7 +27,7 @@ namespace Test
         }
 
         [Initializer("Fib")]
-        [Temporary]
+        [TemporaryMember]
         static void FibInit()
         {
             _cache = new long[1000];

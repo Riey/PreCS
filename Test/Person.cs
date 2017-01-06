@@ -20,10 +20,10 @@ namespace Test
         Gun gun;
         public bool HasGun => gun != null;
 
-        [Inner("gun")]
+        [Through(TargetType.Field, "gun")]
         public void Shoot(Person person) { }
 
-        [Inner("gun")]
+        [Through(TargetType.Field, "gun")]
         public int Boolet { get; }
     }
 }
